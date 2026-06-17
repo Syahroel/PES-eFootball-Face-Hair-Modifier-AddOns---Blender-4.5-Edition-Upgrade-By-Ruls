@@ -1933,7 +1933,7 @@ class Fmdl_UIPanel(bpy.types.Panel):
 		row.label(text="eFootball PES2021 Face/Hair Modifier", icon_value=this_icon)
 		row = box.row()
 		this_icon = icons_collections["custom_icons"]["icon_0"].icon_id
-		row.label(text="Modified by: Ruls Base on MjTs/the4chancup", icon_value=this_icon)
+		row.label(text="Modified by: Ruls on MjTs/the4chancup", icon_value=this_icon)
 		row = box.row()
 		box.label(text="Works with Blender 4.5+ (modified from v2.79 base)", icon="BLENDER")
 		row = box.row()
