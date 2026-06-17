@@ -468,7 +468,11 @@ def importFmdl(context, fmdl, filename, importSettings = None):
 		except Exception:
 			pass
 		try:
-			blenderMaterial.surface_render_method = 'BLENDED' if isTransparent else 'DITHERED'
+			# Hair & eye overlays = solid cutout strands -> DITHERED (like HASHED/CLIP).
+			# Blended mode on hair makes semi-transparent alpha pixels show through,
+			# producing scattered holes and a "see-through" look in EEVEE-Next 4.2+.
+			_srm = 'DITHERED' if (isHair or isEyeOverlay) else ('BLENDED' if isTransparent else 'DITHERED')
+			blenderMaterial.surface_render_method = _srm
 		except Exception:
 			pass
 		
@@ -499,7 +503,9 @@ def importFmdl(context, fmdl, filename, importSettings = None):
 						maxNode = nodes.new('ShaderNodeMath')
 						maxNode.operation = 'MAXIMUM'
 						maxNode.location = (-200, 0)
-						maxNode.inputs[1].default_value = 0.45
+						# Floor raised to 0.85: keeps hair matte, kills glossy environment
+						# reflection hotspots (grey swirly patches) in Material Preview.
+						maxNode.inputs[1].default_value = 0.85
 						links.new(sepNode.outputs['Green'], maxNode.inputs[0])
 						roughOut = maxNode.outputs['Value']
 					except Exception:
@@ -520,6 +526,15 @@ def importFmdl(context, fmdl, filename, importSettings = None):
 			normalNode.location = (-700, -300)
 			normalMap = nodes.new('ShaderNodeNormalMap')
 			normalMap.location = (-400, -300)
+			# Hair: soften the normal so the near-black strands don't catch swirly
+			# HDRI reflections in Material Preview (the "grey swirl" artifact). The
+			# base color is uniformly near-black (albedo ~0.09), so any normal-shaped
+			# reflection of the studio light is the brightest thing visible.
+			if isHair:
+				try:
+					normalMap.inputs['Strength'].default_value = 0.5
+				except Exception:
+					pass
 			# PES normal maps are frequently 2-channel (X in red, Y in green) with an
 			# empty blue channel. Feeding that raw makes Blender read Z=-1 (the normal
 			# points INTO the surface) -> dark, patchy, broken shading (very visible on
@@ -625,9 +640,11 @@ def importFmdl(context, fmdl, filename, importSettings = None):
 			# Hair: keep a little sheen but kill the plastic/blue specular hotspot.
 			# Low specular + neutral tint + a matte roughness fallback (used when no
 			# SRM roughness map is connected; when SRM is present it is floored above).
-			setInput(0.25, ['Specular IOR Level', 'Specular'])
+			# Specular dimatikan & roughness matte agar rambut tidak plastik/mengkilap
+			# dan tidak memantulkan swirl HDRI di Material Preview.
+			setInput(0.0, ['Specular IOR Level', 'Specular'])
 			setInput([1.0, 1.0, 1.0, 1.0], ['Specular Tint'])
-			setInput(0.55, ['Roughness'])
+			setInput(0.90, ['Roughness'])
 		else:
 			setInput(0.4, ['Specular IOR Level', 'Specular'])
 	
